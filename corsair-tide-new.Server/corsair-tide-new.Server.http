@@ -1,0 +1,48 @@
+@Server_HostAddress = http://localhost:5499
+
+# ─────────────────────────────────────────────────────────────
+# 1. Register a player (creates a starter island automatically)
+# ─────────────────────────────────────────────────────────────
+POST {{Server_HostAddress}}/api/players/register
+Content-Type: application/json
+
+{
+  "username": "BlackBart",
+  "email": "bart@sea.io"
+}
+
+###
+
+# ─────────────────────────────────────────────────────────────
+# 2. Get island + current resources
+#    Replace the GUID below with the playerId from step 1.
+# ─────────────────────────────────────────────────────────────
+@playerId = 00000000-0000-0000-0000-000000000000
+
+GET {{Server_HostAddress}}/api/islands/{{playerId}}
+Accept: application/json
+
+###
+
+# ─────────────────────────────────────────────────────────────
+# 3. Start a building upgrade
+#    Valid buildingType values:
+#      Sawmill | GoldMine | Distillery | FishingDock
+#      WoodStorage | GoldStorage | RumStorage | FoodStorage
+# ─────────────────────────────────────────────────────────────
+POST {{Server_HostAddress}}/api/islands/{{playerId}}/upgrades
+Content-Type: application/json
+
+{
+  "buildingType": "Sawmill"
+}
+
+###
+
+# ─────────────────────────────────────────────────────────────
+# 4. Get island again after a few seconds — wood should appear
+# ─────────────────────────────────────────────────────────────
+GET {{Server_HostAddress}}/api/islands/{{playerId}}
+Accept: application/json
+
+###
