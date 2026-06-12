@@ -26,6 +26,14 @@ public sealed class PlayerRepository(IEventStore eventStore, string eventStoreBa
         return events.Count == 0 ? null : Player.Reconstitute(events);
     }
 
+    public async Task<Player?> GetByUsernameAsync(string username, CancellationToken ct = default)
+    {
+        var index = await ReadUsernameIndexAsync(ct);
+        if (!index.TryGetValue(username.ToLowerInvariant(), out var idStr)) return null;
+        if (!Guid.TryParse(idStr, out var guid)) return null;
+        return await GetByIdAsync(new PlayerId(guid), ct);
+    }
+
     public async Task<bool> UsernameExistsAsync(string username, CancellationToken ct = default)
     {
         var index = await ReadUsernameIndexAsync(ct);

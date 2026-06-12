@@ -16,6 +16,13 @@ public class PlayerService(
     IPlayerRepository playerRepository,
     IIslandRepository islandRepository)
 {
+    public async Task<PlayerDto?> GetByUsernameAsync(string username, CancellationToken ct = default)
+    {
+        var player = await playerRepository.GetByUsernameAsync(username, ct);
+        if (player is null) return null;
+        return new PlayerDto(player.Id.Value, player.Username, player.Email);
+    }
+
     public async Task<PlayerDto> RegisterAsync(
         RegisterPlayerRequest request, CancellationToken ct = default)
     {
