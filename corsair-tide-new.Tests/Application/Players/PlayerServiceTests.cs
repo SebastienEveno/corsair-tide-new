@@ -30,7 +30,7 @@ public class PlayerServiceTests
             .Setup(r => r.UsernameExistsAsync("BlackBart", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io");
+        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io", "s3cr3t");
 
         // Act
         var result = await _sut.RegisterAsync(request);
@@ -49,7 +49,7 @@ public class PlayerServiceTests
             .Setup(r => r.UsernameExistsAsync("BlackBart", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io");
+        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io", "s3cr3t");
 
         // Act & Assert
         await Assert.ThrowsAsync<DomainException>(() => _sut.RegisterAsync(request));
@@ -59,7 +59,7 @@ public class PlayerServiceTests
     public async Task RegisterAsync_WithEmptyUsername_ShouldThrowDomainException()
     {
         // Arrange
-        var request = new RegisterPlayerRequest("", "bart@sea.io");
+        var request = new RegisterPlayerRequest("", "bart@sea.io", "s3cr3t");
 
         // Act & Assert
         await Assert.ThrowsAsync<DomainException>(() => _sut.RegisterAsync(request));
@@ -69,7 +69,17 @@ public class PlayerServiceTests
     public async Task RegisterAsync_WithWhitespaceUsername_ShouldThrowDomainException()
     {
         // Arrange
-        var request = new RegisterPlayerRequest("   ", "bart@sea.io");
+        var request = new RegisterPlayerRequest("   ", "bart@sea.io", "s3cr3t");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DomainException>(() => _sut.RegisterAsync(request));
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WithEmptyPassword_ShouldThrowDomainException()
+    {
+        // Arrange
+        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io", "");
 
         // Act & Assert
         await Assert.ThrowsAsync<DomainException>(() => _sut.RegisterAsync(request));
@@ -83,7 +93,7 @@ public class PlayerServiceTests
             .Setup(r => r.UsernameExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io");
+        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io", "s3cr3t");
 
         // Act
         await _sut.RegisterAsync(request);
@@ -102,7 +112,7 @@ public class PlayerServiceTests
             .Setup(r => r.UsernameExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io");
+        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io", "s3cr3t");
 
         // Act
         await _sut.RegisterAsync(request);
@@ -127,7 +137,7 @@ public class PlayerServiceTests
             .Callback<Island, CancellationToken>((island, _) => savedIsland = island)
             .Returns(Task.CompletedTask);
 
-        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io");
+        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io", "s3cr3t");
 
         // Act
         await _sut.RegisterAsync(request);
@@ -158,7 +168,7 @@ public class PlayerServiceTests
             .Callback<Island, CancellationToken>((i, _) => savedIsland = i)
             .Returns(Task.CompletedTask);
 
-        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io");
+        var request = new RegisterPlayerRequest("BlackBart", "bart@sea.io", "s3cr3t");
 
         // Act
         await _sut.RegisterAsync(request);

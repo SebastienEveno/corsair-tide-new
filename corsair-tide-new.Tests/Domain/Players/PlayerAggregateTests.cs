@@ -13,7 +13,7 @@ public class PlayerAggregateTests
     public void Register_ShouldRaisePlayerRegisteredEvent()
     {
         // Arrange & Act
-        var player = Player.Register("BlackBart", "bart@sea.io");
+        var player = Player.Register("BlackBart", "bart@sea.io", "hashed_pw");
 
         // Assert
         Assert.Single(player.UncommittedEvents);
@@ -24,7 +24,7 @@ public class PlayerAggregateTests
     public void Register_ShouldSetUsernameAndEmail()
     {
         // Arrange & Act
-        var player = Player.Register("BlackBart", "bart@sea.io");
+        var player = Player.Register("BlackBart", "bart@sea.io", "hashed_pw");
 
         // Assert
         Assert.Equal("BlackBart", player.Username);
@@ -32,10 +32,20 @@ public class PlayerAggregateTests
     }
 
     [Fact]
+    public void Register_ShouldStorePasswordHash()
+    {
+        // Arrange & Act
+        var player = Player.Register("BlackBart", "bart@sea.io", "hashed_pw");
+
+        // Assert
+        Assert.Equal("hashed_pw", player.PasswordHash);
+    }
+
+    [Fact]
     public void Register_ShouldAssignNonEmptyPlayerId()
     {
         // Arrange & Act
-        var player = Player.Register("BlackBart", "bart@sea.io");
+        var player = Player.Register("BlackBart", "bart@sea.io", "hashed_pw");
 
         // Assert
         Assert.NotEqual(Guid.Empty, player.Id.Value);
@@ -45,8 +55,8 @@ public class PlayerAggregateTests
     public void Register_TwoPlayers_ShouldHaveDifferentIds()
     {
         // Arrange & Act
-        var player1 = Player.Register("BlackBart", "bart@sea.io");
-        var player2 = Player.Register("Redbeard", "red@sea.io");
+        var player1 = Player.Register("BlackBart", "bart@sea.io", "hashed_pw");
+        var player2 = Player.Register("Redbeard", "red@sea.io", "hashed_pw");
 
         // Assert
         Assert.NotEqual(player1.Id, player2.Id);
@@ -60,7 +70,7 @@ public class PlayerAggregateTests
         // Arrange
         var events = new List<DomainEvent>
         {
-            new PlayerRegisteredEvent(Guid.NewGuid(), "BlackBart", "bart@sea.io")
+            new PlayerRegisteredEvent(Guid.NewGuid(), "BlackBart", "bart@sea.io", "hashed_pw")
         };
 
         // Act
@@ -72,13 +82,29 @@ public class PlayerAggregateTests
     }
 
     [Fact]
+    public void Reconstitute_ShouldRestorePasswordHash()
+    {
+        // Arrange
+        var events = new List<DomainEvent>
+        {
+            new PlayerRegisteredEvent(Guid.NewGuid(), "BlackBart", "bart@sea.io", "hashed_pw")
+        };
+
+        // Act
+        var player = Player.Reconstitute(events);
+
+        // Assert
+        Assert.Equal("hashed_pw", player.PasswordHash);
+    }
+
+    [Fact]
     public void Reconstitute_ShouldRestorePlayerId()
     {
         // Arrange
         var id = Guid.NewGuid();
         var events = new List<DomainEvent>
         {
-            new PlayerRegisteredEvent(id, "BlackBart", "bart@sea.io")
+            new PlayerRegisteredEvent(id, "BlackBart", "bart@sea.io", "hashed_pw")
         };
 
         // Act
@@ -94,7 +120,7 @@ public class PlayerAggregateTests
         // Arrange
         var events = new List<DomainEvent>
         {
-            new PlayerRegisteredEvent(Guid.NewGuid(), "BlackBart", "bart@sea.io")
+            new PlayerRegisteredEvent(Guid.NewGuid(), "BlackBart", "bart@sea.io", "hashed_pw")
         };
 
         // Act
@@ -110,7 +136,7 @@ public class PlayerAggregateTests
     public void Version_ShouldBeOneAfterRegistration()
     {
         // Arrange & Act
-        var player = Player.Register("BlackBart", "bart@sea.io");
+        var player = Player.Register("BlackBart", "bart@sea.io", "hashed_pw");
 
         // Assert
         Assert.Equal(1, player.Version);
