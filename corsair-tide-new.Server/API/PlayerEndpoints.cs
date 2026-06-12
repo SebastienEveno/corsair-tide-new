@@ -10,6 +10,18 @@ public static class PlayerEndpoints
         var group = app.MapGroup("/api/players")
             .WithTags("Players");
 
+        // GET /api/players/{username}
+        group.MapGet("/{username}", async (
+            string username,
+            PlayerService svc,
+            CancellationToken ct) =>
+        {
+            var player = await svc.GetByUsernameAsync(username, ct);
+            return player is null ? Results.NotFound() : Results.Ok(player);
+        })
+        .WithName("GetPlayer")
+        .WithSummary("Look up a player by username.");
+
         // POST /api/players/register
         // Body: { "username": "...", "email": "..." }
         group.MapPost("/register", async (

@@ -1,184 +1,155 @@
-import { useState, useEffect } from 'react';
-import aspireLogo from '/Aspire.png';
+import { useState } from 'react';
+import { api } from './api';
+import type { PlayerDto } from './api';
+import { IslandDashboard } from './IslandDashboard';
 import './App.css';
 
-interface WeatherForecast {
-  date: string;
-  temperatureC: number;
-  temperatureF: number;
-  summary: string;
-}
+const inputCls =
+  'w-full rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-500 ' +
+  'px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition';
 
-function App() {
-  const [weatherData, setWeatherData] = useState<WeatherForecast[]>([]);
-  const [loading, setLoading] = useState(false);
+type Mode = 'login' | 'register';
+type FormState = 'idle' | 'loading' | 'error';
+
+function AuthForm({ onSuccess }: { onSuccess: (player: PlayerDto) => void }) {
+  const [mode, setMode] = useState<Mode>('login');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [formState, setFormState] = useState<FormState>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [useCelsius, setUseCelsius] = useState(false);
 
-  const fetchWeatherForecast = async () => {
-    setLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormState('loading');
     setError(null);
-    
+
     try {
-      const response = await fetch('/api/weatherforecast');
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      let player: PlayerDto;
+      if (mode === 'login') {
+        player = await api.getPlayer(username.trim());
+      } else {
+        player = await api.registerPlayer(username.trim(), email.trim());
       }
-      
-      const data: WeatherForecast[] = await response.json();
-      setWeatherData(data);
+      onSuccess(player);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch weather data');
-      console.error('Error fetching weather forecast:', err);
-    } finally {
-      setLoading(false);
+      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setFormState('error');
     }
   };
 
-  useEffect(() => {
-    fetchWeatherForecast();
-  }, []);
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(undefined, { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
-    });
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setError(null);
+    setFormState('idle');
   };
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <a 
-          href="https://aspire.dev" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          aria-label="Visit Aspire website (opens in new tab)"
-          className="logo-link"
-        >
-          <img src={aspireLogo} className="logo" alt="Aspire logo" />
-        </a>
-        <h1 className="app-title">Aspire Starter</h1>
-        <p className="app-subtitle">Modern distributed application development</p>
-      </header>
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <div
+        className="fixed inset-0 bg-gradient-to-b from-slate-900 via-blue-950 to-slate-900"
+        style={{ zIndex: -1 }}
+      />
 
-      <main className="main-content">
-        <section className="weather-section" aria-labelledby="weather-heading">
-          <div className="card">
-            <div className="section-header">
-              <h2 id="weather-heading" className="section-title">Weather Forecast</h2>
-              <div className="header-actions">
-                <fieldset className="toggle-switch" aria-label="Temperature unit selection">
-                  <legend className="visually-hidden">Temperature unit</legend>
-                  <button 
-                    className={`toggle-option ${!useCelsius ? 'active' : ''}`}
-                    onClick={() => setUseCelsius(false)}
-                    aria-pressed={!useCelsius}
-                    type="button"
-                  >
-                    <span aria-hidden="true">°F</span>
-                    <span className="visually-hidden">Fahrenheit</span>
-                  </button>
-                  <button 
-                    className={`toggle-option ${useCelsius ? 'active' : ''}`}
-                    onClick={() => setUseCelsius(true)}
-                    aria-pressed={useCelsius}
-                    type="button"
-                  >
-                    <span aria-hidden="true">°C</span>
-                    <span className="visually-hidden">Celsius</span>
-                  </button>
-                </fieldset>
-                <button 
-                  className="refresh-button"
-                  onClick={fetchWeatherForecast} 
-                  disabled={loading}
-                  aria-label={loading ? 'Loading weather forecast' : 'Refresh weather forecast'}
-                  type="button"
-                >
-                  <svg 
-                    className={`refresh-icon ${loading ? 'spinning' : ''}`}
-                    width="20" 
-                    height="20" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2"
-                    aria-hidden="true"
-                    focusable="false"
-                  >
-                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-                  </svg>
-                  <span>{loading ? 'Loading...' : 'Refresh'}</span>
-                </button>
-              </div>
-            </div>
-            
-            {error && (
-              <div className="error-message" role="alert" aria-live="polite">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                <span>{error}</span>
-              </div>
-            )}
-            
-            {loading && weatherData.length === 0 && (
-              <div className="loading-skeleton" role="status" aria-live="polite" aria-label="Loading weather data">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="skeleton-row" aria-hidden="true" />
-                ))}
-                <span className="visually-hidden">Loading weather forecast data...</span>
-              </div>
-            )}
-            
-            {weatherData.length > 0 && (
-              <div className="weather-grid">
-                {weatherData.map((forecast, index) => (
-                  <article key={index} className="weather-card" aria-label={`Weather for ${formatDate(forecast.date)}`}>
-                    <h3 className="weather-date">
-                      <time dateTime={forecast.date}>{formatDate(forecast.date)}</time>
-                    </h3>
-                    <p className="weather-summary">{forecast.summary}</p>
-                    <div className="weather-temps" aria-label={`Temperature: ${useCelsius ? forecast.temperatureC : forecast.temperatureF} degrees ${useCelsius ? 'Celsius' : 'Fahrenheit'}`}>
-                      <div className="temp-group">
-                        <span className="temp-value" aria-hidden="true">
-                          {useCelsius ? forecast.temperatureC : forecast.temperatureF}°
-                        </span>
-                        <span className="temp-unit" aria-hidden="true">{useCelsius ? 'Celsius' : 'Fahrenheit'}</span>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="text-5xl mb-3">💀</div>
+          <h1 className="text-4xl font-bold text-amber-400 tracking-wide">Corsair Tide</h1>
+          <p className="text-slate-400 mt-2 text-sm">
+            Claim your island. Build your fleet. Rule the seas.
+          </p>
+        </div>
+
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-8">
+          <div className="flex mb-6 bg-slate-900 rounded-lg p-1">
+            {(['login', 'register'] as Mode[]).map(m => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => switchMode(m)}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition
+                  ${mode === m
+                    ? 'bg-amber-500 text-slate-900'
+                    : 'text-slate-400 hover:text-slate-200'}`}
+              >
+                {m === 'login' ? 'Log In' : 'Register'}
+              </button>
+            ))}
           </div>
-        </section>
-      </main>
 
-      <footer className="app-footer">
-        <nav aria-label="Footer navigation">
-          <a href="https://aspire.dev" target="_blank" rel="noopener noreferrer">
-            Learn more about Aspire<span className="visually-hidden"> (opens in new tab)</span>
-          </a>
-          <a 
-            href="https://github.com/microsoft/aspire" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="github-link"
-            aria-label="View Aspire on GitHub (opens in new tab)"
-          >
-            <img src="/github.svg" alt="" width="24" height="24" aria-hidden="true" />
-            <span className="visually-hidden">GitHub</span>
-          </a>
-        </nav>
-      </footer>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-1.5">
+                Pirate Name
+              </label>
+              <input
+                id="username"
+                type="text"
+                required
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="e.g. BlackBart"
+                className={inputCls}
+              />
+            </div>
+
+            {mode === 'register' && (
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-1.5">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@sea.io"
+                  className={inputCls}
+                />
+              </div>
+            )}
+
+            {error && (
+              <div className="text-red-400 text-sm bg-red-950/40 border border-red-800 rounded-lg px-4 py-2.5">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={formState === 'loading'}
+              className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-amber-800 disabled:cursor-not-allowed
+                         text-slate-900 font-bold py-3 rounded-lg transition text-sm tracking-wide"
+            >
+              {formState === 'loading'
+                ? 'Setting sail...'
+                : mode === 'login'
+                  ? 'Enter the Seas'
+                  : 'Claim Your Island'}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-slate-600 text-xs mt-6">
+          No treasure required to start.
+        </p>
+      </div>
     </div>
   );
 }
 
-export default App;
+export default function App() {
+  const [player, setPlayer] = useState<PlayerDto | null>(null);
+
+  if (player) {
+    return (
+      <IslandDashboard
+        playerId={player.playerId}
+        username={player.username}
+        onLogout={() => setPlayer(null)}
+      />
+    );
+  }
+
+  return <AuthForm onSuccess={setPlayer} />;
+}
