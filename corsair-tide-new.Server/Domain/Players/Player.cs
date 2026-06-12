@@ -9,13 +9,14 @@ public class Player : AggregateRoot<PlayerId>
 
     public string Username { get; private set; } = string.Empty;
     public string Email { get; private set; } = string.Empty;
+    public string PasswordHash { get; private set; } = string.Empty;
 
     // ── Factory: new player ──────────────────────────────────────────────
 
-    public static Player Register(string username, string email)
+    public static Player Register(string username, string email, string passwordHash)
     {
         var player = new Player();
-        player.Raise(new PlayerRegisteredEvent(Guid.NewGuid(), username, email));
+        player.Raise(new PlayerRegisteredEvent(Guid.NewGuid(), username, email, passwordHash));
         return player;
     }
 
@@ -38,6 +39,7 @@ public class Player : AggregateRoot<PlayerId>
                 Id = PlayerId.From(e.PlayerId);
                 Username = e.Username;
                 Email = e.Email;
+                PasswordHash = e.PasswordHash;
                 break;
         }
     }

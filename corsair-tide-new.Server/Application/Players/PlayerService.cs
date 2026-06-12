@@ -4,7 +4,7 @@ using CorsairTide.Server.Domain.Players;
 
 namespace CorsairTide.Server.Application.Players;
 
-public record RegisterPlayerRequest(string Username, string Email);
+public record RegisterPlayerRequest(string Username, string Email, string Password);
 public record PlayerDto(Guid PlayerId, string Username, string Email);
 
 /// <summary>
@@ -29,11 +29,16 @@ public class PlayerService(
         if (string.IsNullOrWhiteSpace(request.Username))
             throw new DomainException("Username cannot be empty.");
 
+        if (string.IsNullOrWhiteSpace(request.Password))
+            throw new DomainException("Password cannot be empty.");
+
         if (await playerRepository.UsernameExistsAsync(request.Username, ct))
             throw new DomainException($"Username '{request.Username}' is already taken.");
 
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+
         // Create player
-        var player = Player.Register(request.Username.Trim(), request.Email.Trim());
+        var player = Player.Register(request.Username.Trim(), request.Email.Trim(), passwordHash);
         await playerRepository.SaveAsync(player, ct);
 
         // Create starter island
