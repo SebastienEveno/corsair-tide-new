@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="corsair-tide-new.AppHost/corsair-tide-new.AppHost.csproj" />
+  <Project Path="corsair-tide-new.Server/corsair-tide-new.Server.csproj" />
+  <Project Path="corsair-tide-new.Tests/corsair-tide-new.Tests.csproj" />
+  <Project Path="frontend/frontend.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+</Solution>
