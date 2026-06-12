@@ -1,11 +1,15 @@
+using System.Text;
 using System.Text.Json.Serialization;
 using CorsairTide.Server.API;
+using CorsairTide.Server.Application.Auth;
 using CorsairTide.Server.Application.Islands;
 using CorsairTide.Server.Application.Players;
 using CorsairTide.Server.Domain.Islands;
 using CorsairTide.Server.Domain.Players;
 using CorsairTide.Server.Infrastructure.EventStore;
 using CorsairTide.Server.Infrastructure.Repositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,9 +24,29 @@ builder.Services.AddOpenApi();
 builder.Services.ConfigureHttpJsonOptions(opts =>
     opts.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
+// ── JWT authentication ────────────────────────────────────────────────────────
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = builder.Configuration["Jwt:Issuer"],
+            ValidAudience            = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 // ── Event store (JSON files for local dev) ────────────────────────────────────
-// Events are written to  {ContentRoot}/event-store/
-// Add event-store/ to your .gitignore — it is local state, not source code.
 var eventStorePath = Path.Combine(builder.Environment.ContentRootPath, "event-store");
 builder.Services.AddSingleton<IEventStore>(_ => new JsonFileEventStore(eventStorePath));
 
@@ -36,6 +60,7 @@ builder.Services.AddScoped<IPlayerRepository>(sp =>
 // ── Application services ──────────────────────────────────────────────────────
 builder.Services.AddScoped<IslandService>();
 builder.Services.AddScoped<PlayerService>();
+builder.Services.AddScoped<AuthService>();
 
 // ─────────────────────────────────────────────────────────────────────────────
 var app = builder.Build();
@@ -52,7 +77,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 // ── API endpoints ─────────────────────────────────────────────────────────────
+app.MapAuthEndpoints();
 app.MapIslandEndpoints();
 app.MapPlayerEndpoints();
 

@@ -1,9 +1,26 @@
+// ── Token storage ─────────────────────────────────────────────────────────────
+
+const TOKEN_KEY = 'corsair_jwt';
+
+export const auth = {
+  getToken: (): string | null => localStorage.getItem(TOKEN_KEY),
+  setToken: (token: string) => localStorage.setItem(TOKEN_KEY, token),
+  clear: () => localStorage.removeItem(TOKEN_KEY),
+  isLoggedIn: () => !!localStorage.getItem(TOKEN_KEY),
+};
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface PlayerDto {
   playerId: string;
   username: string;
   email: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  username: string;
+  playerId: string;
 }
 
 export interface ResourcesDto {
@@ -35,38 +52,50 @@ export interface IslandDto {
 // ── API calls ─────────────────────────────────────────────────────────────────
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  });
+  const token = auth.getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const res = await fetch(url, { headers, ...init });
+
+  if (res.status === 401) {
+    auth.clear();
+    window.location.reload();
+    throw new Error('Session expired. Please log in again.');
+  }
+
   if (!res.ok) {
     let message = `HTTP ${res.status}`;
     try {
       const body = await res.json();
       message = body.error ?? body.title ?? message;
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
     throw new Error(message);
   }
+
   return res.json() as Promise<T>;
 }
 
 export const api = {
-  registerPlayer: (username: string, email: string) =>
-    request<PlayerDto>('/api/players/register', {
+  login: (username: string, password: string) =>
+    request<LoginResponse>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username, email }),
+      body: JSON.stringify({ username, password }),
     }),
 
-  getPlayer: (username: string) =>
-    request<PlayerDto>(`/api/players/${encodeURIComponent(username)}`),
+  registerPlayer: (username: string, email: string, password: string) =>
+    request<PlayerDto>('/api/players/register', {
+      method: 'POST',
+      body: JSON.stringify({ username, email, password }),
+    }),
 
-  getIsland: (playerId: string) =>
-    request<IslandDto>(`/api/islands/${playerId}`),
+  getIsland: () =>
+    request<IslandDto>('/api/islands/me'),
 
-  startUpgrade: (playerId: string, buildingType: string) =>
-    request<IslandDto>(`/api/islands/${playerId}/upgrades`, {
+  startUpgrade: (buildingType: string) =>
+    request<IslandDto>('/api/islands/me/upgrades', {
       method: 'POST',
       body: JSON.stringify({ buildingType }),
     }),

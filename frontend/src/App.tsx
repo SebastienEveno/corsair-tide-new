@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { api } from './api';
-import type { PlayerDto } from './api';
+import { api, auth } from './api';
+import type { LoginResponse } from './api';
 import { IslandDashboard } from './IslandDashboard';
 import './App.css';
 
@@ -11,10 +11,11 @@ const inputCls =
 type Mode = 'login' | 'register';
 type FormState = 'idle' | 'loading' | 'error';
 
-function AuthForm({ onSuccess }: { onSuccess: (player: PlayerDto) => void }) {
+function AuthForm({ onSuccess }: { onSuccess: (session: LoginResponse) => void }) {
   const [mode, setMode] = useState<Mode>('login');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [formState, setFormState] = useState<FormState>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -24,13 +25,16 @@ function AuthForm({ onSuccess }: { onSuccess: (player: PlayerDto) => void }) {
     setError(null);
 
     try {
-      let player: PlayerDto;
+      let session: LoginResponse;
       if (mode === 'login') {
-        player = await api.getPlayer(username.trim());
+        session = await api.login(username.trim(), password);
       } else {
-        player = await api.registerPlayer(username.trim(), email.trim());
+        const player = await api.registerPlayer(username.trim(), email.trim(), password);
+        session = await api.login(username.trim(), password);
+        void player;
       }
-      onSuccess(player);
+      auth.setToken(session.token);
+      onSuccess(session);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
       setFormState('error');
@@ -49,7 +53,6 @@ function AuthForm({ onSuccess }: { onSuccess: (player: PlayerDto) => void }) {
         className="fixed inset-0 bg-gradient-to-b from-slate-900 via-blue-950 to-slate-900"
         style={{ zIndex: -1 }}
       />
-
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">💀</div>
@@ -109,6 +112,21 @@ function AuthForm({ onSuccess }: { onSuccess: (player: PlayerDto) => void }) {
               </div>
             )}
 
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-1.5">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className={inputCls}
+              />
+            </div>
+
             {error && (
               <div className="text-red-400 text-sm bg-red-950/40 border border-red-800 rounded-lg px-4 py-2.5">
                 {error}
@@ -123,9 +141,7 @@ function AuthForm({ onSuccess }: { onSuccess: (player: PlayerDto) => void }) {
             >
               {formState === 'loading'
                 ? 'Setting sail...'
-                : mode === 'login'
-                  ? 'Enter the Seas'
-                  : 'Claim Your Island'}
+                : mode === 'login' ? 'Enter the Seas' : 'Claim Your Island'}
             </button>
           </form>
         </div>
@@ -139,17 +155,23 @@ function AuthForm({ onSuccess }: { onSuccess: (player: PlayerDto) => void }) {
 }
 
 export default function App() {
-  const [player, setPlayer] = useState<PlayerDto | null>(null);
+  const [session, setSession] = useState<LoginResponse | null>(
+    auth.isLoggedIn() ? { token: auth.getToken()!, username: '', playerId: '' } : null
+  );
 
-  if (player) {
+  const handleLogout = () => {
+    auth.clear();
+    setSession(null);
+  };
+
+  if (session) {
     return (
       <IslandDashboard
-        playerId={player.playerId}
-        username={player.username}
-        onLogout={() => setPlayer(null)}
+        username={session.username}
+        onLogout={handleLogout}
       />
     );
   }
 
-  return <AuthForm onSuccess={setPlayer} />;
+  return <AuthForm onSuccess={setSession} />;
 }

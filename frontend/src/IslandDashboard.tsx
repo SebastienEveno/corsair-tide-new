@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from './api';
 import type { IslandDto } from './api';
 
-// ── Resource meta ─────────────────────────────────────────────────────────────
-
 const RESOURCE_META = [
   { key: 'wood' as const,  label: 'Wood',  icon: '🪵', rateKey: 'woodPerHour' as const },
   { key: 'gold' as const,  label: 'Gold',  icon: '🪙', rateKey: 'goldPerHour' as const },
@@ -11,11 +9,9 @@ const RESOURCE_META = [
   { key: 'food' as const,  label: 'Food',  icon: '🐟', rateKey: 'foodPerHour' as const },
 ];
 
-// ── Building meta ─────────────────────────────────────────────────────────────
-
 const BUILDING_META: Record<string, { icon: string; label: string }> = {
   Sawmill:     { icon: '🔨', label: 'Sawmill'      },
-  GoldMine:    { icon: '⚡',       label: 'Gold Mine'    },
+  GoldMine:    { icon: '⚡', label: 'Gold Mine'    },
   Distillery:  { icon: '🏭', label: 'Distillery'   },
   FishingDock: { icon: '🎣', label: 'Fishing Dock' },
   WoodStorage: { icon: '📦', label: 'Wood Storage' },
@@ -23,8 +19,6 @@ const BUILDING_META: Record<string, { icon: string; label: string }> = {
   RumStorage:  { icon: '🛢', label: 'Rum Storage'  },
   FoodStorage: { icon: '🧱', label: 'Food Storage' },
 };
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return 'Done!';
@@ -37,18 +31,10 @@ function fmt(n: number): string {
   return Math.floor(n).toLocaleString();
 }
 
-// ── Active upgrade countdown ──────────────────────────────────────────────────
-
 function UpgradeTimer({
-  completesAt,
-  buildingType,
-  targetLevel,
-  onComplete,
+  completesAt, buildingType, targetLevel, onComplete,
 }: {
-  completesAt: string;
-  buildingType: string;
-  targetLevel: number;
-  onComplete: () => void;
+  completesAt: string; buildingType: string; targetLevel: number; onComplete: () => void;
 }) {
   const [remaining, setRemaining] = useState(() =>
     Math.max(0, (new Date(completesAt).getTime() - Date.now()) / 1000)
@@ -67,8 +53,7 @@ function UpgradeTimer({
   }, [completesAt, onComplete, remaining]);
 
   const elapsed = (new Date(completesAt).getTime() - Date.now()) / 1000 + remaining;
-  const total = Math.max(1, elapsed);
-  const progress = Math.min(100, ((total - remaining) / total) * 100);
+  const progress = Math.min(100, ((Math.max(1, elapsed) - remaining) / Math.max(1, elapsed)) * 100);
   const meta = BUILDING_META[buildingType] ?? { icon: '🔨', label: buildingType };
 
   return (
@@ -91,39 +76,27 @@ function UpgradeTimer({
   );
 }
 
-// ── Resources panel ───────────────────────────────────────────────────────────
-
 function ResourcesPanel({ island }: { island: IslandDto }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-      {RESOURCE_META.map(({ key, label, icon, rateKey }) => {
-        const amount = island.resources[key];
-        const rate = island[rateKey];
-        return (
-          <div key={key} className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-            <div className="text-2xl mb-1">{icon}</div>
-            <div className="text-white font-bold text-lg leading-tight">{fmt(amount)}</div>
-            <div className="text-slate-400 text-xs">{label}</div>
-            {rate > 0 && (
-              <div className="text-amber-400 text-xs mt-1">+{fmt(rate)}/hr</div>
-            )}
-          </div>
-        );
-      })}
+      {RESOURCE_META.map(({ key, label, icon, rateKey }) => (
+        <div key={key} className="bg-slate-800 border border-slate-700 rounded-xl p-4">
+          <div className="text-2xl mb-1">{icon}</div>
+          <div className="text-white font-bold text-lg leading-tight">{fmt(island.resources[key])}</div>
+          <div className="text-slate-400 text-xs">{label}</div>
+          {island[rateKey] > 0 && (
+            <div className="text-amber-400 text-xs mt-1">+{fmt(island[rateKey])}/hr</div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
 
-// ── Buildings panel ───────────────────────────────────────────────────────────
-
 function BuildingsPanel({
-  island,
-  playerId,
-  onUpgradeStarted,
+  island, onUpgradeStarted,
 }: {
-  island: IslandDto;
-  playerId: string;
-  onUpgradeStarted: (updated: IslandDto) => void;
+  island: IslandDto; onUpgradeStarted: (updated: IslandDto) => void;
 }) {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -132,7 +105,7 @@ function BuildingsPanel({
     setLoading(buildingType);
     setError(null);
     try {
-      const updated = await api.startUpgrade(playerId, buildingType);
+      const updated = await api.startUpgrade(buildingType);
       onUpgradeStarted(updated);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start upgrade');
@@ -156,7 +129,6 @@ function BuildingsPanel({
           const meta = BUILDING_META[type] ?? { icon: '🏛', label: type };
           const isUpgrading = island.activeUpgrade?.buildingType === type;
           const isDisabled = hasActiveUpgrade || loading !== null;
-
           return (
             <div
               key={type}
@@ -191,16 +163,10 @@ function BuildingsPanel({
   );
 }
 
-// ── Main dashboard ────────────────────────────────────────────────────────────
-
 export function IslandDashboard({
-  playerId,
-  username,
-  onLogout,
+  username, onLogout,
 }: {
-  playerId: string;
-  username: string;
-  onLogout: () => void;
+  username: string; onLogout: () => void;
 }) {
   const [island, setIsland] = useState<IslandDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -208,17 +174,16 @@ export function IslandDashboard({
 
   const fetchIsland = useCallback(async () => {
     try {
-      const data = await api.getIsland(playerId);
+      const data = await api.getIsland();
       setIsland(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load island');
     } finally {
       setLoading(false);
     }
-  }, [playerId]);
+  }, []);
 
   useEffect(() => { fetchIsland(); }, [fetchIsland]);
-
   useEffect(() => {
     const id = setInterval(fetchIsland, 30_000);
     return () => clearInterval(id);
@@ -226,27 +191,22 @@ export function IslandDashboard({
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
-      <div className="fixed inset-0 bg-gradient-to-b from-slate-900 via-blue-950 to-slate-900" style={{ zIndex: -1 }} />
-
+      <div
+        className="fixed inset-0 bg-gradient-to-b from-slate-900 via-blue-950 to-slate-900"
+        style={{ zIndex: -1 }}
+      />
       <header className="border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-xl font-bold text-amber-400">Corsair Tide</span>
-        </div>
+        <span className="font-bold text-amber-400">Corsair Tide</span>
         <div className="flex items-center gap-3">
           <span className="text-slate-400 text-sm">{username}</span>
-          <button
-            onClick={onLogout}
-            className="text-slate-500 hover:text-slate-300 text-xs transition"
-          >
+          <button onClick={onLogout} className="text-slate-500 hover:text-slate-300 text-xs transition">
             Log out
           </button>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6">
-        {loading && (
-          <div className="text-slate-400 text-sm animate-pulse">Loading your island...</div>
-        )}
+        {loading && <div className="text-slate-400 text-sm animate-pulse">Loading your island...</div>}
         {error && (
           <div className="text-red-400 text-sm bg-red-950/40 border border-red-800 rounded-lg px-4 py-3">
             {error}
@@ -256,7 +216,6 @@ export function IslandDashboard({
           <div>
             <h1 className="text-2xl font-bold text-amber-400 mb-1">{island.name}</h1>
             <p className="text-slate-500 text-xs mb-6 font-mono">{island.islandId}</p>
-
             {island.activeUpgrade && (
               <UpgradeTimer
                 completesAt={island.activeUpgrade.completesAt}
@@ -265,9 +224,8 @@ export function IslandDashboard({
                 onComplete={fetchIsland}
               />
             )}
-
             <ResourcesPanel island={island} />
-            <BuildingsPanel island={island} playerId={playerId} onUpgradeStarted={setIsland} />
+            <BuildingsPanel island={island} onUpgradeStarted={setIsland} />
           </div>
         )}
       </main>
